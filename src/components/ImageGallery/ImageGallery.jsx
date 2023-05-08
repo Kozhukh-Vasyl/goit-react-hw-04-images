@@ -2,7 +2,7 @@ import ImageGalleryItem from '../ImageGalleryItem';
 import './ImageGallery.css';
 import PropTypes from 'prop-types';
 
-function ImageGallery({ items }) {
+function ImageGallery({ items }) { 
     return (
         <>
             <ul className='ImageGallery'>
