@@ -1,49 +1,58 @@
-import './Searchbar.css';
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as Yup from 'yup';
+import {
+  Searchbar,
+  SearchForm,
+  SearchFormButton,
+  SearchFormInput,
+  SearchFormErrorMessage,
+} from './Searchbar.styled';
 
-import { ImSearch } from 'react-icons/im';
+const validationSchema = Yup.object().shape({
+  imageSearch: Yup.string().trim().required('Search field cannot be empty'),
+});
 
-class Searchbar extends Component {
-  state = {
-    inputData: '',
+export default function SearchBar({ onSubmit }) {
+  const [searchValue, setSearchValue] = useState('');
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(validationSchema),
+  });
+
+  const onSubmitForm = (data, e) => {
+    onSubmit(data.imageSearch);
+    reset();
   };
-  onChangeInput = e => {
-    this.setState({ inputData: e.currentTarget.value.toLowerCase() });
+
+  const handleSearchInputChange = event => {
+    setSearchValue(event.target.value);
   };
 
-  handleSubmit = e => {
-    e.preventDefault();
-    this.props.onSubmit(this.state.inputData);
-    this.setState({ inputData: '' });
-  };
-
-  render() {
-    const { inputData } = this.state.inputData;
-    return (
-      <header className="Searchbar">
-        <form className="SearchForm" onSubmit={this.handleSubmit}>
-          <button type="submit" className="SearchForm-button">
-            <ImSearch size={25} />
-          </button>
-
-          <input
-            className="SearchForm-input"
-            name="inputData"
-            value={inputData}
-            onChange={this.onChangeInput}
-            type="text"
-            autoComplete="off"
-            autoFocus
-            placeholder="Search images and photos"
-          />
-        </form>
-      </header>
-    );
-  }
+  return (
+    <Searchbar>
+      <SearchForm onSubmit={handleSubmit(onSubmitForm)}>
+        {errors.imageSearch && (
+          <SearchFormErrorMessage>
+            {errors.imageSearch?.message}
+          </SearchFormErrorMessage>
+        )}
+        <SearchFormInput
+          name="imageSearch"
+          type="text"
+          {...register('imageSearch')}
+          onChange={handleSearchInputChange}
+        />
+        <SearchFormButton type="submit" disabled={!searchValue}>
+          Search
+        </SearchFormButton>
+      </SearchForm>
+    </Searchbar>
+  );
 }
-
-export default Searchbar;
-Searchbar.propType = {
-  onSubmit: PropTypes.func.isRequired,
-};

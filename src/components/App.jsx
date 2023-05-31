@@ -1,93 +1,100 @@
-import { useState } from 'react';
-import Button from './Button';
+import { useState, useEffect } from 'react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { Container } from './Container/Container.styled';
+import fetchImages from '../services/pixabayAPI';
+import SearchBar from './Searchbar';
 import ImageGallery from './ImageGallery';
-import './App.css';
-import  fetchImages from './fetchImages/fetchImages';
-import Searchbar from './Searchbar';
-import Notiflix from 'notiflix';
+import Button from './Button';
 import Loader from './Loader';
 
-let page = 1;
+export default function App() {
+  const [images, setImages] = useState([]);
+  const [value, setValue] = useState('');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [loadmore, setLoadMore] = useState(true);
 
-const App = () => {
-  const [inputData, setInputData] = useState('');
-  const [items, setItems] = useState([]);
-  const [status, setStatus] = useState('idle');
-  const [totalHits, setTotalHits] = useState(0);
+  useEffect(() => {
+    const galleryList = document.querySelector('ul');
+    const lastImage = galleryList.lastElementChild;
 
-  const handleSubmit = async inputData => {
-    page = 1;
-    if (inputData.trim() === '') {
-      Notiflix.Notify.info('You cannot search by empty field, try again.');
+    if (images.length > 12) {
+      const { height: cardHeight } = lastImage.getBoundingClientRect();
+
+      window.scrollBy({
+        top: cardHeight * 4,
+        behavior: 'smooth',
+      });
+    }
+
+    if (images.length > 0) {
+      toast(`We found ${images.length} images for your request!`);
+    }
+  }, [images]);
+
+  useEffect(() => {
+    if (query === '') {
       return;
-    } else {
+    }
+
+    async function getImages() {
       try {
-        setStatus('pending');
-        const { totalHits, hits } = await fetchImages(inputData, page);
-        if (hits.length < 1) {
-          setStatus('idle');
-          Notiflix.Notify.failure(
-            'Sorry, there are no images matching your search query. Please try again.'
-          );
-        } else {
-          setItems(hits);
-          setInputData(inputData);
-          setTotalHits(totalHits);
-          setStatus('resolved');
+        setLoading(true);
+        setLoadMore(true);
+
+        if (value !== query) {
+          const responseImages = await fetchImages(query, 1);
+
+          if (responseImages.length === 0) {
+            setImages([]);
+            return toast(`Oops, no results were found for your search.`);
+          }
+
+          setValue(query);
+          setImages([...responseImages]);
+          setPage(1);
+          return;
         }
-      } catch (error) {
-        setStatus('rejected');
+
+        if (page > 1) {
+          const responseImages = await fetchImages(query, page);
+
+          if (responseImages.length < 12) {
+            setLoadMore(false);
+          }
+
+          return setImages(s => [...s, ...responseImages]);
+        }
+      } catch {
+        setLoadMore(false);
+        toast(`All images found for your request!`);
+      } finally {
+        setLoading(false);
       }
     }
-  };
-  const onNextPage = async () => {
-    setStatus('pending');
 
-    try {
-      const { hits } = await fetchImages(inputData, (page += 1));
-      setItems(prevState => [...prevState, ...hits]);
-      setStatus('resolved');
-    } catch (error) {
-      setStatus('rejected');
-    }
-  };
+    getImages();
+  }, [page, query, value]);
 
-  if (status === 'idle') {
-    return (
-      <div className="App">
-        <Searchbar onSubmit={handleSubmit} />
-      </div>
-    );
+  function searchQuery(searchValue) {
+    setQuery(searchValue);
   }
-  if (status === 'pending') {
-    return (
-      <div className="App">
-        <Searchbar onSubmit={handleSubmit} />
-        <ImageGallery page={page} items={items} />
-        <Loader />
-        {totalHits > 12 && <Button onClick={onNextPage} />}
-      </div>
-    );
-  }
-  if (status === 'rejected') {
-    return (
-      <div className="App">
-        <Searchbar onSubmit={handleSubmit} />
-        <p>Something wrong, try later</p>
-      </div>
-    );
-  }
-  if (status === 'resolved') {
-    return (
-      <div className="App">
-        <Searchbar onSubmit={handleSubmit} />
-        <ImageGallery page={page} items={items} />
-        {totalHits > 12 && totalHits > items.length && (
-          <Button onClick={onNextPage} />
-        )}
-      </div>
-    );
-  }
-};
 
-export default App;
+  function handleLoadMoreClick() {
+    setPage(prevPage => prevPage + 1);
+  }
+
+  const showLoadMoreButton = images.length < 12 || !loadmore;
+
+  return (
+    <Container>
+      {loading && <Loader />}
+      <SearchBar onSubmit={searchQuery} />
+      <ImageGallery images={images} />
+      {showLoadMoreButton ? null : <Button buttonClick={handleLoadMoreClick} />}
+      <ToastContainer autoClose={1500} />
+    </Container>
+  );
+}

@@ -1,21 +1,17 @@
 import ImageGalleryItem from '../ImageGalleryItem';
-import './ImageGallery.css';
-import PropTypes from 'prop-types';
+import { ImageGalleryList } from './ImageGallery.styled';
 
-function ImageGallery({ items }) { 
-    return (
-        <>
-            <ul className='ImageGallery'>
-                {items.map(item => (
-                    <ImageGalleryItem key={item.id} item={item} />
-                ))}
-            </ul>
-        </>
-    );
+export default function ImageGallery({ images }) {
+  return (
+    <ImageGalleryList>
+      {images.map(({ id, webformatURL, largeImageURL, tags }) => (
+        <ImageGalleryItem
+          key={id}
+          webformatURL={webformatURL}
+          tags={tags}
+          largeImageURL={largeImageURL}
+        />
+      ))}
+    </ImageGalleryList>
+  );
 }
-
-export default ImageGallery;
-
-ImageGallery.propTypes = {
-    items: PropTypes.array,
-};
